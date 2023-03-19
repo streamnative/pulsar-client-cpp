@@ -80,11 +80,11 @@ void ProducerStatsImpl::flushAndReset(const boost::system::error_code& ec) {
     sendMap_.clear();
     latencyAccumulator_ =
         LatencyAccumulator(boost::accumulators::tag::extended_p_square::probabilities = probs);
-    lock.unlock();
 
     timer_->expires_from_now(boost::posix_time::seconds(statsIntervalInSeconds_));
     timer_->async_wait(std::bind(&pulsar::ProducerStatsImpl::flushAndReset, this, std::placeholders::_1));
     LOG_INFO(tmp);
+    lock.unlock();
 }
 
 void ProducerStatsImpl::messageSent(const Message& msg) {
