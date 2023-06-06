@@ -1202,7 +1202,7 @@ void ClientConnection::close(Result result) {
     if (result != ResultDisconnected && result != ResultRetryable) {
         LOG_ERROR(cnxString_ << "Connection closed with " << result);
     } else {
-        LOG_INFO(cnxString_ << "Connection disconnected");
+        LOG_WARN(cnxString_ << "Connection disconnected with " << result);
     }
 
     for (ProducersMap::iterator it = producers.begin(); it != producers.end(); ++it) {
