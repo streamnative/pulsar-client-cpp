@@ -125,7 +125,7 @@ class RetryableLookupService : public LookupService,
                 timer.expires_from_now(delay);
 
                 auto nextRemainingTime = remainingTime - delay;
-                LOG_INFO("Reschedule " << key << " for " << delay.total_milliseconds()
+                LOG_WARN("Reschedule " << key << " for " << delay.total_milliseconds()
                                        << " ms, remaining time: " << nextRemainingTime.total_milliseconds()
                                        << " ms");
                 timer.async_wait([this, weakSelf, key, f, promise,

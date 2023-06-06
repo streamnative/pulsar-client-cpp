@@ -66,10 +66,10 @@ void HandlerBase::setCnx(const ClientConnectionPtr& cnx) {
 
 void HandlerBase::grabCnx() {
     if (getCnx().lock()) {
-        LOG_INFO(getName() << "Ignoring reconnection request since we're already connected");
+        LOG_WARN(getName() << "Ignoring reconnection request since we're already connected");
         return;
     }
-    LOG_INFO(getName() << "Getting connection from pool");
+    LOG_WARN(getName() << "Getting connection from pool");
     ClientImplPtr client = client_.lock();
     Future<Result, ClientConnectionWeakPtr> future = client->getConnection(topic_);
     future.addListener(std::bind(&HandlerBase::handleNewConnection, std::placeholders::_1,
@@ -116,6 +116,7 @@ void HandlerBase::handleDisconnection(Result result, ClientConnectionWeakPtr con
 
     handler->resetCnx();
 
+    LOG_WARN(handler->getName() << " disconnected (result: " << result << ", state: " << state << ")");
     if (result == ResultRetryable) {
         scheduleReconnection(handler);
         return;
@@ -145,7 +146,7 @@ void HandlerBase::scheduleReconnection(HandlerBasePtr handler) {
     if (state == Pending || state == Ready) {
         TimeDuration delay = handler->backoff_.next();
 
-        LOG_INFO(handler->getName() << "Schedule reconnection in " << (delay.total_milliseconds() / 1000.0)
+        LOG_WARN(handler->getName() << "Schedule reconnection in " << (delay.total_milliseconds() / 1000.0)
                                     << " s");
         handler->timer_->expires_from_now(delay);
         // passing shared_ptr here since time_ will get destroyed, so tasks will be cancelled

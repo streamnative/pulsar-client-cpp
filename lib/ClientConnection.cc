@@ -1595,7 +1595,7 @@ void ClientConnection::close(Result result) {
     }
 
     lock.unlock();
-    LOG_INFO(cnxString_ << "Connection closed with " << result);
+    LOG_WARN(cnxString_ << "Connection closed with " << result);
 
     for (ProducersMap::iterator it = producers.begin(); it != producers.end(); ++it) {
         HandlerBase::handleDisconnection(result, shared_from_this(), it->second);
