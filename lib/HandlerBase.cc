@@ -80,7 +80,7 @@ void HandlerBase::handleNewConnection(Result result, ClientConnectionWeakPtr con
                                       HandlerBaseWeakPtr weakHandler) {
     HandlerBasePtr handler = weakHandler.lock();
     if (!handler) {
-        LOG_DEBUG("HandlerBase Weak reference is not valid anymore");
+        LOG_WARN("HandlerBase Weak reference is not valid anymore: " << result);
         return;
     }
     if (result == ResultOk) {
@@ -91,7 +91,7 @@ void HandlerBase::handleNewConnection(Result result, ClientConnectionWeakPtr con
             return;
         }
         // TODO - look deeper into why the connection is null while the result is ResultOk
-        LOG_INFO(handler->getName() << "ClientConnectionPtr is no longer valid");
+        LOG_WARN(handler->getName() << "ClientConnectionPtr is no longer valid");
     }
     handler->connectionFailed(result);
     scheduleReconnection(handler);
