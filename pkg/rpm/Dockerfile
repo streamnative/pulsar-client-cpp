@@ -19,18 +19,19 @@
 
 # Build pulsar client library in Centos with tools to build static RPM
 
-FROM centos:7
+FROM rockylinux:8
 
 ARG PLATFORM
 
 RUN yum update -y && \
     yum install -y \
+        gcc \
         gcc-c++ \
         make \
+        perl \
         rpm-build \
         which \
         createrepo \
-        libstdc++-static \
         python3
 
 RUN pip3 install pyyaml
@@ -39,15 +40,13 @@ ADD .build/dependencies.yaml /
 ADD .build/dep-version.py /usr/local/bin
 
 # Download and compile boost
-# GCC 4.8.2 implementation of std::regex is buggy, so we install boost::regex here
 RUN BOOST_VERSION=$(dep-version.py boost) && \
     echo "BOOST VERSION: '${BOOST_VERSION}'" && \
     BOOST_VERSION_UNDESRSCORE=$(echo $BOOST_VERSION | sed 's/\./_/g') && \
     curl -O -L https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_UNDESRSCORE}.tar.gz && \
     tar xfz boost_${BOOST_VERSION_UNDESRSCORE}.tar.gz && \
     cd boost_${BOOST_VERSION_UNDESRSCORE} && \
-    ./bootstrap.sh --with-libraries=regex && \
-    ./b2 address-model=64 cxxflags=-fPIC link=static threading=multi variant=release install && \
+    cp -rf ./boost /usr/include/ && \
     rm -rf /boost_${BOOST_VERSION_UNDESRSCORE}.tar.gz /boost_${BOOST_VERSION_UNDESRSCORE}
 
 RUN CMAKE_VERSION=$(dep-version.py cmake) && \
@@ -102,7 +101,6 @@ RUN OPENSSL_VERSION=$(dep-version.py openssl) && \
     make -j8 && make install && \
     rm -rf /OpenSSL_${OPENSSL_VERSION_UNDERSCORE}.tar.gz /openssl-OpenSSL_${OPENSSL_VERSION_UNDERSCORE}
 
-ENV LD_LIBRARY_PATH /usr/local/ssl/lib/:
 ENV OPENSSL_ROOT_DIR /usr/local/ssl/
 
 # LibCurl
@@ -114,4 +112,3 @@ RUN CURL_VERSION=$(dep-version.py curl) && \
     CFLAGS=-fPIC ./configure --with-ssl=/usr/local/ssl/ --without-zstd && \
     make -j8 && make install && \
     rm -rf /curl-${CURL_VERSION}.tar.gz /curl-${CURL_VERSION}
-
