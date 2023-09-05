@@ -1,0 +1,78 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+name: CI - Test RPM build based on Rocky Linux 8
+on:
+  pull_request:
+    branches:
+      - branch-*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-linux:
+    name: Build ${{matrix.pkg.name}} ${{matrix.cpu.platform}}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 500
+
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg:
+          - { name: 'RPM', type: 'rpm', path: 'pkg/rpm/RPMS' }
+        cpu:
+          - { arch: 'x86_64', platform: 'x86_64' }
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Package Pulsar source
+        run: build-support/generate-source-archive.sh
+
+      - uses: docker/setup-buildx-action@v2
+      - run: build-support/copy-deps-versionfile.sh
+
+      - name: Build dependencies Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./pkg/${{matrix.pkg.type}}
+          load: true
+          tags: build:latest
+          platforms: linux/${{matrix.cpu.platform}}
+          build-args: PLATFORM=${{matrix.cpu.arch}}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build packages
+        run: pkg/${{matrix.pkg.type}}/docker-build-${{matrix.pkg.type}}-${{matrix.cpu.platform}}.sh build:latest
+
+      - name: Zip artifact
+        run: zip -r ${{matrix.pkg.type}}-${{matrix.cpu.platform}}.zip ${{matrix.pkg.path}}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{matrix.pkg.type}}-${{matrix.cpu.platform}}
+          path: ${{matrix.pkg.path}}
