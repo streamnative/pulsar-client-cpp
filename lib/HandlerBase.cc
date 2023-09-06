@@ -86,7 +86,7 @@ void HandlerBase::handleNewConnection(Result result, ClientConnectionWeakPtr con
     if (result == ResultOk) {
         ClientConnectionPtr conn = connection.lock();
         if (conn) {
-            LOG_DEBUG(handler->getName() << "Connected to broker: " << conn->cnxString());
+            LOG_INFO(handler->getName() << "Connected to broker: " << conn->cnxString());
             handler->connectionOpened(conn);
             return;
         }
@@ -116,6 +116,7 @@ void HandlerBase::handleDisconnection(Result result, ClientConnectionWeakPtr con
 
     handler->resetCnx();
 
+    LOG_INFO(handler->getName() << " Disconnected (result: " << result << ", state: " << state << ")");
     if (result == ResultRetryable) {
         scheduleReconnection(handler);
         return;
@@ -132,7 +133,7 @@ void HandlerBase::handleDisconnection(Result result, ClientConnectionWeakPtr con
         case Closed:
         case Producer_Fenced:
         case Failed:
-            LOG_DEBUG(handler->getName()
+            LOG_INFO(handler->getName()
                       << "Ignoring connection closed event since the handler is not used anymore");
             break;
     }
@@ -149,6 +150,8 @@ void HandlerBase::scheduleReconnection(HandlerBasePtr handler) {
         // passing shared_ptr here since time_ will get destroyed, so tasks will be cancelled
         // so we will not run into the case where grabCnx is invoked on out of scope handler
         handler->timer_->async_wait(std::bind(&HandlerBase::handleTimeout, std::placeholders::_1, handler));
+    } else {
+        LOG_INFO(handler->getName() << "Do not schedule reconnection based on current state: " << state);
     }
 }
 
@@ -157,6 +160,7 @@ void HandlerBase::handleTimeout(const boost::system::error_code& ec, HandlerBase
         LOG_DEBUG(handler->getName() << "Ignoring timer cancelled event, code[" << ec << "]");
         return;
     } else {
+        LOG_INFO(handler->getName() << "Getting new connection");
         handler->epoch_++;
         handler->grabCnx();
     }

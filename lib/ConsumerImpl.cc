@@ -257,6 +257,7 @@ void ConsumerImpl::connectionOpened(const ClientConnectionPtr& cnx) {
 }
 
 void ConsumerImpl::connectionFailed(Result result) {
+    LOG_INFO(getName() << "Connection failed: " << result);
     // Keep a reference to ensure object is kept alive
     auto ptr = get_shared_this_ptr();
 
@@ -275,6 +276,7 @@ void ConsumerImpl::sendFlowPermitsToBroker(const ClientConnectionPtr& cnx, int n
 
 void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result result) {
     static bool firstTime = true;
+    LOG_INFO(getName() << "Handle create consumer: " << result);
     if (result == ResultOk) {
         if (firstTime) {
             firstTime = false;
@@ -294,7 +296,7 @@ void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result r
             availablePermits_ = 0;
         }
 
-        LOG_DEBUG(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
+        LOG_INFO(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
         if (consumerTopicType_ == NonPartitioned || !firstTime) {
             if (config_.getReceiverQueueSize() != 0) {
                 sendFlowPermitsToBroker(cnx, config_.getReceiverQueueSize());
@@ -305,6 +307,7 @@ void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result r
         consumerCreatedPromise_.setValue(get_shared_this_ptr());
     } else {
         if (result == ResultTimeout) {
+            LOG_INFO(getName() << "Timeout in reconnecting the consumer");
             // Creating the consumer has timed out. We need to ensure the broker closes the consumer
             // in case it was indeed created, otherwise it might prevent new subscribe operation,
             // since we are not closing the connection
@@ -317,6 +320,7 @@ void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result r
             LOG_WARN(getName() << "Failed to reconnect consumer: " << strResult(result));
             scheduleReconnection(get_shared_this_ptr());
         } else {
+            LOG_INFO(getName() << "Failed to create initial consumer: " << strResult(result));
             // Consumer was not yet created, retry to connect to broker if it's possible
             result = convertToTimeoutIfNecessary(result, creationTimestamp_);
             if (result == ResultRetryable) {
