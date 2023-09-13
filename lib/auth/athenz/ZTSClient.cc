@@ -20,6 +20,7 @@
 
 #include <sstream>
 
+#include "lib/CurlWrapper.h"
 #include "lib/LogUtils.h"
 
 #ifndef _MSC_VER
@@ -27,7 +28,6 @@
 #else
 #include <stdio.h>
 #endif
-#include <curl/curl.h>
 #include <openssl/ec.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
@@ -273,11 +273,6 @@ const std::string ZTSClient::getPrincipalToken() const {
     return principalToken;
 }
 
-static size_t curlWriteCallback(void *contents, size_t size, size_t nmemb, void *responseDataPtr) {
-    ((std::string *)responseDataPtr)->append((char *)contents, size * nmemb);
-    return size * nmemb;
-}
-
 static std::mutex cacheMtx_;
 const std::string ZTSClient::getRoleToken() const {
     RoleToken roleToken;
@@ -295,52 +290,28 @@ const std::string ZTSClient::getRoleToken() const {
     }
 
     std::string completeUrl = ztsUrl_ + "/zts/v1/domain/" + providerDomain_ + "/token";
-
-    CURL *handle;
-    CURLcode res;
-    std::string responseData;
-
-    handle = curl_easy_init();
-
-    // set URL
-    curl_easy_setopt(handle, CURLOPT_URL, completeUrl.c_str());
-
-    // Write callback
-    curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlWriteCallback);
-    curl_easy_setopt(handle, CURLOPT_WRITEDATA, &responseData);
-
-    // New connection is made for each call
-    curl_easy_setopt(handle, CURLOPT_FRESH_CONNECT, 1L);
-    curl_easy_setopt(handle, CURLOPT_FORBID_REUSE, 1L);
-
-    // Skipping signal handling - results in timeouts not honored during the DNS lookup
-    curl_easy_setopt(handle, CURLOPT_NOSIGNAL, 1L);
-
-    // Timer
-    curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, REQUEST_TIMEOUT);
-
-    // Redirects
-    curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(handle, CURLOPT_MAXREDIRS, MAX_HTTP_REDIRECTS);
-
-    // Fail if HTTP return code >= 400
-    curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L);
-
-    struct curl_slist *list = NULL;
     std::string httpHeader = principalHeader_ + ": " + getPrincipalToken();
-    list = curl_slist_append(list, httpHeader.c_str());
-    curl_easy_setopt(handle, CURLOPT_HTTPHEADER, list);
 
-    // Make get call to server
-    res = curl_easy_perform(handle);
+    CurlWrapper curl;
+    if (!curl.init()) {
+        LOG_ERROR("Failed to init curl");
+        return "";
+    }
 
-    // Free header list
-    curl_slist_free_all(list);
+    CurlWrapper::Options options;
+    options.timeoutInSeconds = REQUEST_TIMEOUT;
+    options.maxLookupRedirects = MAX_HTTP_REDIRECTS;
+    auto result = curl.get(completeUrl, httpHeader, options, nullptr);
+    if (!result.error.empty()) {
+        LOG_ERROR(completeUrl << " failed: " << result.error);
+        return "";
+    }
+    auto res = result.code;
+    const auto &responseData = result.responseData;
+    long response_code = result.responseCode;
 
     switch (res) {
         case CURLE_OK:
-            long response_code;
-            curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &response_code);
             LOG_DEBUG("Response received for url " << completeUrl << " code " << response_code);
             if (response_code == 200) {
                 ptree::ptree root;
@@ -367,7 +338,6 @@ const std::string ZTSClient::getRoleToken() const {
             LOG_ERROR("Response failed for url " << completeUrl << ". Error Code " << res);
             break;
     }
-    curl_easy_cleanup(handle);
 
     return roleToken.token;
 }
