@@ -80,7 +80,7 @@ class CurlWrapper {
                const TlsContext* tlsContext) const;
 
    private:
-    CURL* handle_;
+    CURL* handle_{nullptr};
 
     struct CurlListGuard {
         curl_slist*& headers;
