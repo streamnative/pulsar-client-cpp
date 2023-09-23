@@ -223,7 +223,7 @@ Future<Result, bool> ConsumerImpl::connectionOpened(const ClientConnectionPtr& c
     Promise<Result, bool> promise;
 
     if (state_ == Closed) {
-        LOG_DEBUG(getName() << "connectionOpened : Consumer is already closed");
+        LOG_WARN(getName() << "connectionOpened : Consumer is already closed");
         promise.setFailed(ResultAlreadyClosed);
         return promise.getFuture();
     }
@@ -248,6 +248,7 @@ Future<Result, bool> ConsumerImpl::connectionOpened(const ClientConnectionPtr& c
 
     ClientImplPtr client = client_.lock();
     uint64_t requestId = client->newRequestId();
+    LOG_WARN(getName() << "start subscribing the topic");
     SharedBuffer cmd = Commands::newSubscribe(
         topic(), subscription_, consumerId_, requestId, getSubType(), consumerName_, subscriptionMode_,
         subscribeMessageId, readCompacted_, config_.getProperties(), config_.getSubscriptionProperties(),
@@ -289,6 +290,7 @@ void ConsumerImpl::sendFlowPermitsToBroker(const ClientConnectionPtr& cnx, int n
 Result ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result result) {
     Result handleResult = ResultOk;
 
+    LOG_WARN(getName() << "created consumer: " << result << ", " << cnx->cnxString());
     static bool firstTime = true;
     if (result == ResultOk) {
         if (firstTime) {
@@ -309,7 +311,7 @@ Result ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result
             availablePermits_ = 0;
         }
 
-        LOG_DEBUG(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
+        LOG_WARN(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
         if (consumerTopicType_ == NonPartitioned || !firstTime) {
             if (config_.getReceiverQueueSize() != 0) {
                 sendFlowPermitsToBroker(cnx, config_.getReceiverQueueSize());
@@ -1232,7 +1234,7 @@ void ConsumerImpl::negativeAcknowledge(const MessageId& messageId) {
 }
 
 void ConsumerImpl::disconnectConsumer() {
-    LOG_INFO("Broker notification of Closed consumer: " << consumerId_);
+    LOG_WARN("Broker notification of Closed consumer: " << consumerId_);
     resetCnx();
     scheduleReconnection();
 }

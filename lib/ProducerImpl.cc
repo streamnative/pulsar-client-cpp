@@ -140,7 +140,7 @@ Future<Result, bool> ProducerImpl::connectionOpened(const ClientConnectionPtr& c
     Promise<Result, bool> promise;
 
     if (state_ == Closed) {
-        LOG_DEBUG(getName() << "connectionOpened : Producer is already closed");
+        LOG_WARN(getName() << "connectionOpened : Producer is already closed");
         promise.setFailed(ResultAlreadyClosed);
         return promise.getFuture();
     }
@@ -188,7 +188,7 @@ Result ProducerImpl::handleCreateProducer(const ClientConnectionPtr& cnx, Result
 
     Lock lock(mutex_);
 
-    LOG_DEBUG(getName() << "ProducerImpl::handleCreateProducer res: " << strResult(result));
+    LOG_WARN(getName() << "ProducerImpl::handleCreateProducer res: " << strResult(result));
 
     // make sure we're still in the Pending/Ready state, closeAsync could have been invoked
     // while waiting for this response if using lazy producers
@@ -966,7 +966,7 @@ bool ProducerImpl::encryptMessage(proto::MessageMetadata& metadata, SharedBuffer
 }
 
 void ProducerImpl::disconnectProducer() {
-    LOG_DEBUG("Broker notification of Closed producer: " << producerId_);
+    LOG_WARN("Broker notification of Closed producer: " << producerId_);
     resetCnx();
     scheduleReconnection();
 }
