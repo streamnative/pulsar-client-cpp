@@ -108,27 +108,30 @@ class RetryableOperation : public std::enable_shared_from_this<RetryableOperatio
             timer_->expires_from_now(delay);
 
             auto nextRemainingTime = remainingTime - delay;
-            LOG_INFO("Reschedule " << name_ << " for " << delay.total_milliseconds()
+            LOG_WARN("Reschedule " << name_ << " for " << delay.total_milliseconds()
                                    << " ms, remaining time: " << nextRemainingTime.total_milliseconds()
                                    << " ms");
-            timer_->async_wait([this, weakSelf, nextRemainingTime](const boost::system::error_code& ec) {
-                auto self = weakSelf.lock();
-                if (!self) {
-                    return;
-                }
-                if (ec) {
-                    if (ec == boost::asio::error::operation_aborted) {
-                        LOG_DEBUG("Timer for " << name_ << " is cancelled");
-                        promise_.setFailed(ResultTimeout);
-                    } else {
-                        LOG_WARN("Timer for " << name_ << " failed: " << ec.message());
+            auto name = name_;
+            timer_->async_wait(
+                [this, weakSelf, nextRemainingTime, name](const boost::system::error_code& ec) {
+                    auto self = weakSelf.lock();
+                    if (!self) {
+                        LOG_WARN(name << " is expired in the callback");
+                        return;
                     }
-                } else {
-                    LOG_DEBUG("Run operation " << name_ << ", remaining time: "
-                                               << nextRemainingTime.total_milliseconds() << " ms");
-                    runImpl(nextRemainingTime);
-                }
-            });
+                    if (ec) {
+                        if (ec == boost::asio::error::operation_aborted) {
+                            LOG_WARN("Timer for " << name_ << " is cancelled");
+                            promise_.setFailed(ResultTimeout);
+                        } else {
+                            LOG_WARN("Timer for " << name_ << " failed: " << ec.message());
+                        }
+                    } else {
+                        LOG_DEBUG("Run operation " << name_ << ", remaining time: "
+                                                   << nextRemainingTime.total_milliseconds() << " ms");
+                        runImpl(nextRemainingTime);
+                    }
+                });
         });
         return promise_.getFuture();
     }

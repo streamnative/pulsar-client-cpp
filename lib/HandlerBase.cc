@@ -67,17 +67,17 @@ void HandlerBase::setCnx(const ClientConnectionPtr& cnx) {
 
 void HandlerBase::grabCnx() {
     if (getCnx().lock()) {
-        LOG_INFO(getName() << "Ignoring reconnection request since we're already connected");
+        LOG_WARN(getName() << "Ignoring reconnection request since we're already connected");
         return;
     }
 
     bool expectedState = false;
     if (!reconnectionPending_.compare_exchange_strong(expectedState, true)) {
-        LOG_DEBUG(getName() << "Ignoring reconnection attempt since there's already a pending reconnection");
+        LOG_WARN(getName() << "Ignoring reconnection attempt since there's already a pending reconnection");
         return;
     }
 
-    LOG_INFO(getName() << "Getting connection from pool");
+    LOG_WARN(getName() << "Getting connection from pool");
     ClientImplPtr client = client_.lock();
     if (!client) {
         LOG_WARN(getName() << "Client is invalid when calling grabCnx()");
@@ -85,18 +85,19 @@ void HandlerBase::grabCnx() {
         return;
     }
     auto weakSelf = get_weak_from_this();
+    auto name = getName();
     client->getConnection(*topic_).addListener(
-        [this, weakSelf](Result result, const ClientConnectionPtr& cnx) {
+        [this, weakSelf, name](Result result, const ClientConnectionPtr& cnx) {
             auto self = weakSelf.lock();
             if (!self) {
-                LOG_DEBUG("HandlerBase Weak reference is not valid anymore");
+                LOG_WARN(name << " HandlerBase Weak reference is not valid anymore: " << result);
                 return;
             }
 
             reconnectionPending_ = false;
 
             if (result == ResultOk) {
-                LOG_DEBUG(getName() << "Connected to broker: " << cnx->cnxString());
+                LOG_WARN(getName() << "Connected to broker: " << cnx->cnxString());
                 connectionOpened(cnx);
             } else {
                 connectionFailed(result);
@@ -116,6 +117,7 @@ void HandlerBase::handleDisconnection(Result result, const ClientConnectionPtr& 
     }
 
     resetCnx();
+    LOG_WARN(getName() << " disconnected (result: " << result << ", state: " << state << ")");
 
     if (result == ResultRetryable) {
         scheduleReconnection();
@@ -144,7 +146,7 @@ void HandlerBase::scheduleReconnection() {
     if (state == Pending || state == Ready) {
         TimeDuration delay = backoff_.next();
 
-        LOG_INFO(getName() << "Schedule reconnection in " << (delay.total_milliseconds() / 1000.0) << " s");
+        LOG_WARN(getName() << "Schedule reconnection in " << (delay.total_milliseconds() / 1000.0) << " s");
         timer_->expires_from_now(delay);
         // passing shared_ptr here since time_ will get destroyed, so tasks will be cancelled
         // so we will not run into the case where grabCnx is invoked on out of scope handler

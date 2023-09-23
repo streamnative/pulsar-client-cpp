@@ -222,7 +222,7 @@ void ConsumerImpl::onNegativeAcksSend(const std::set<MessageId>& messageIds) {
 
 void ConsumerImpl::connectionOpened(const ClientConnectionPtr& cnx) {
     if (state_ == Closed) {
-        LOG_DEBUG(getName() << "connectionOpened : Consumer is already closed");
+        LOG_WARN(getName() << "connectionOpened : Consumer is already closed");
         return;
     }
 
@@ -246,6 +246,7 @@ void ConsumerImpl::connectionOpened(const ClientConnectionPtr& cnx) {
 
     ClientImplPtr client = client_.lock();
     uint64_t requestId = client->newRequestId();
+    LOG_WARN(getName() << "start subscribing the topic");
     SharedBuffer cmd = Commands::newSubscribe(
         *topic_, subscription_, consumerId_, requestId, getSubType(), consumerName_, subscriptionMode_,
         subscribeMessageId, readCompacted_, config_.getProperties(), config_.getSubscriptionProperties(),
@@ -274,6 +275,7 @@ void ConsumerImpl::sendFlowPermitsToBroker(const ClientConnectionPtr& cnx, int n
 }
 
 void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result result) {
+    LOG_WARN(getName() << "created consumer: " << result << ", " << cnx->cnxString());
     static bool firstTime = true;
     if (result == ResultOk) {
         if (firstTime) {
@@ -294,7 +296,7 @@ void ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result r
             availablePermits_ = 0;
         }
 
-        LOG_DEBUG(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
+        LOG_WARN(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
         if (consumerTopicType_ == NonPartitioned || !firstTime) {
             if (config_.getReceiverQueueSize() != 0) {
                 sendFlowPermitsToBroker(cnx, config_.getReceiverQueueSize());
@@ -1204,7 +1206,7 @@ void ConsumerImpl::negativeAcknowledge(const MessageId& messageId) {
 }
 
 void ConsumerImpl::disconnectConsumer() {
-    LOG_INFO("Broker notification of Closed consumer: " << consumerId_);
+    LOG_WARN("Broker notification of Closed consumer: " << consumerId_);
     resetCnx();
     scheduleReconnection();
 }

@@ -1329,7 +1329,7 @@ void ClientConnection::close(Result result, bool detach) {
     if (result != ResultDisconnected && result != ResultRetryable) {
         LOG_ERROR(cnxString_ << "Connection closed with " << result);
     } else {
-        LOG_INFO(cnxString_ << "Connection disconnected");
+        LOG_WARN(cnxString_ << "Connection disconnected: " << result);
     }
     // Remove the connection from the pool before completing any promise
     if (detach) {
