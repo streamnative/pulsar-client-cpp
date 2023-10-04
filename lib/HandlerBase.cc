@@ -84,26 +84,18 @@ void HandlerBase::grabCnx() {
         connectionFailed(ResultConnectError);
         return;
     }
-    auto weakSelf = get_weak_from_this();
-    auto name = getName();
-    client->getConnection(*topic_).addListener(
-        [this, weakSelf, name](Result result, const ClientConnectionPtr& cnx) {
-            auto self = weakSelf.lock();
-            if (!self) {
-                LOG_WARN(name << " HandlerBase Weak reference is not valid anymore: " << result);
-                return;
-            }
+    auto self = shared_from_this();
+    client->getConnection(*topic_).addListener([this, self](Result result, const ClientConnectionPtr& cnx) {
+        reconnectionPending_ = false;
 
-            reconnectionPending_ = false;
-
-            if (result == ResultOk) {
-                LOG_WARN(getName() << "Connected to broker: " << cnx->cnxString());
-                connectionOpened(cnx);
-            } else {
-                connectionFailed(result);
-                scheduleReconnection();
-            }
-        });
+        if (result == ResultOk) {
+            LOG_DEBUG(getName() << "Connected to broker: " << cnx->cnxString());
+            connectionOpened(cnx);
+        } else {
+            connectionFailed(result);
+            scheduleReconnection();
+        }
+    });
 }
 
 void HandlerBase::handleDisconnection(Result result, const ClientConnectionPtr& cnx) {
@@ -150,11 +142,14 @@ void HandlerBase::scheduleReconnection() {
         timer_->expires_from_now(delay);
         // passing shared_ptr here since time_ will get destroyed, so tasks will be cancelled
         // so we will not run into the case where grabCnx is invoked on out of scope handler
-        auto weakSelf = get_weak_from_this();
-        timer_->async_wait([weakSelf](const boost::system::error_code& ec) {
+        auto name = getName();
+        std::weak_ptr<HandlerBase> weakSelf{shared_from_this()};
+        timer_->async_wait([name, weakSelf](const boost::system::error_code& ec) {
             auto self = weakSelf.lock();
             if (self) {
                 self->handleTimeout(ec);
+            } else {
+                LOG_WARN(name << "Cancel the reconnection since the handler is destroyed");
             }
         });
     }
