@@ -70,17 +70,17 @@ void HandlerBase::setCnx(const ClientConnectionPtr& cnx) {
 void HandlerBase::grabCnx() {
     bool expectedState = false;
     if (!reconnectionPending_.compare_exchange_strong(expectedState, true)) {
-        LOG_INFO(getName() << "Ignoring reconnection attempt since there's already a pending reconnection");
+        LOG_WARN(getName() << "Ignoring reconnection attempt since there's already a pending reconnection");
         return;
     }
 
     if (getCnx().lock()) {
-        LOG_INFO(getName() << "Ignoring reconnection request since we're already connected");
+        LOG_WARN(getName() << "Ignoring reconnection request since we're already connected");
         reconnectionPending_ = false;
         return;
     }
 
-    LOG_INFO(getName() << "Getting connection from pool");
+    LOG_WARN(getName() << "Getting connection from pool");
     ClientImplPtr client = client_.lock();
     if (!client) {
         LOG_WARN(getName() << "Client is invalid when calling grabCnx()");
@@ -92,7 +92,7 @@ void HandlerBase::grabCnx() {
     auto cnxFuture = client->getConnection(topic(), connectionKeySuffix_);
     cnxFuture.addListener([this, self](Result result, const ClientConnectionPtr& cnx) {
         if (result == ResultOk) {
-            LOG_DEBUG(getName() << "Connected to broker: " << cnx->cnxString());
+            LOG_WARN(getName() << "Connected to broker: " << cnx->cnxString());
             connectionOpened(cnx).addListener([this, self](Result result, bool) {
                 // Do not use bool, only Result.
                 reconnectionPending_ = false;

@@ -107,7 +107,7 @@ Future<Result, ClientConnectionWeakPtr> ConnectionPool::getConnectionAsync(const
         return promise.getFuture();
     }
 
-    LOG_INFO("Created connection for " << key);
+    LOG_WARN("Created connection for " << key);
 
     Future<Result, ClientConnectionWeakPtr> future = cnx->getConnectFuture();
     pool_.insert(std::make_pair(key, cnx));
@@ -122,7 +122,7 @@ void ConnectionPool::remove(const std::string& key, ClientConnection* value) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto it = pool_.find(key);
     if (it != pool_.end() && it->second.get() == value) {
-        LOG_INFO("Remove connection for " << key);
+        LOG_WARN("Remove connection for " << key);
         pool_.erase(it);
     }
 }

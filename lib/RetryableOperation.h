@@ -109,7 +109,7 @@ class RetryableOperation : public std::enable_shared_from_this<RetryableOperatio
             timer_->expires_from_now(delay);
 
             auto nextRemainingTime = remainingTime - delay;
-            LOG_INFO("Reschedule " << name_ << " for " << delay.total_milliseconds()
+            LOG_WARN("Reschedule " << name_ << " for " << delay.total_milliseconds()
                                    << " ms, remaining time: " << nextRemainingTime.total_milliseconds()
                                    << " ms");
             timer_->async_wait([this, weakSelf, nextRemainingTime](const boost::system::error_code& ec) {
@@ -119,14 +119,14 @@ class RetryableOperation : public std::enable_shared_from_this<RetryableOperatio
                 }
                 if (ec) {
                     if (ec == boost::asio::error::operation_aborted) {
-                        LOG_DEBUG("Timer for " << name_ << " is cancelled");
+                        LOG_WARN("Timer for " << name_ << " is cancelled");
                         promise_.setFailed(ResultTimeout);
                     } else {
                         LOG_WARN("Timer for " << name_ << " failed: " << ec.message());
                     }
                 } else {
-                    LOG_DEBUG("Run operation " << name_ << ", remaining time: "
-                                               << nextRemainingTime.total_milliseconds() << " ms");
+                    LOG_WARN("Run operation " << name_ << ", remaining time: "
+                                              << nextRemainingTime.total_milliseconds() << " ms");
                     runImpl(nextRemainingTime);
                 }
             });

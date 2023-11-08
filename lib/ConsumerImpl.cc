@@ -256,6 +256,7 @@ Future<Result, bool> ConsumerImpl::connectionOpened(const ClientConnectionPtr& c
 
     // Keep a reference to ensure object is kept alive.
     auto self = get_shared_this_ptr();
+    LOG_WARN(getName() << "start subscribing the topic");
     cnx->sendRequestWithId(cmd, requestId)
         .addListener([this, self, cnx, promise](Result result, const ResponseData& responseData) {
             Result handleResult = handleCreateConsumer(cnx, result);
@@ -294,7 +295,7 @@ Result ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result
         if (firstTime) {
             firstTime = false;
         }
-        LOG_INFO(getName() << "Created consumer on broker " << cnx->cnxString());
+        LOG_WARN(getName() << "Created consumer on broker " << cnx->cnxString());
         {
             Lock lock(mutex_);
             setCnx(cnx);
@@ -309,7 +310,7 @@ Result ConsumerImpl::handleCreateConsumer(const ClientConnectionPtr& cnx, Result
             availablePermits_ = 0;
         }
 
-        LOG_DEBUG(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
+        LOG_WARN(getName() << "Send initial flow permits: " << config_.getReceiverQueueSize());
         if (consumerTopicType_ == NonPartitioned || !firstTime) {
             if (config_.getReceiverQueueSize() != 0) {
                 sendFlowPermitsToBroker(cnx, config_.getReceiverQueueSize());
@@ -1232,7 +1233,7 @@ void ConsumerImpl::negativeAcknowledge(const MessageId& messageId) {
 }
 
 void ConsumerImpl::disconnectConsumer() {
-    LOG_INFO("Broker notification of Closed consumer: " << consumerId_);
+    LOG_WARN("Broker notification of Closed consumer: " << consumerId_);
     resetCnx();
     scheduleReconnection();
 }

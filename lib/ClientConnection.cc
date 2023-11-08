@@ -1317,7 +1317,7 @@ void ClientConnection::close(Result result, bool detach) {
     if (!isResultRetryable(result)) {
         LOG_ERROR(cnxString_ << "Connection closed with " << result << " (refCnt: " << refCount << ")");
     } else {
-        LOG_INFO(cnxString_ << "Connection disconnected (refCnt: " << refCount << ")");
+        LOG_WARN(cnxString_ << "Connection disconnected (refCnt: " << refCount << ")");
     }
     // Remove the connection from the pool before completing any promise
     if (detach) {
