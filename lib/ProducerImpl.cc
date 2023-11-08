@@ -140,7 +140,7 @@ Future<Result, bool> ProducerImpl::connectionOpened(const ClientConnectionPtr& c
     Promise<Result, bool> promise;
 
     if (state_ == Closed) {
-        LOG_DEBUG(getName() << "connectionOpened : Producer is already closed");
+        LOG_WARN(getName() << "connectionOpened : Producer is already closed");
         promise.setFailed(ResultAlreadyClosed);
         return promise.getFuture();
     }
@@ -188,7 +188,7 @@ Result ProducerImpl::handleCreateProducer(const ClientConnectionPtr& cnx, Result
 
     Lock lock(mutex_);
 
-    LOG_DEBUG(getName() << "ProducerImpl::handleCreateProducer res: " << strResult(result));
+    LOG_WARN(getName() << "ProducerImpl::handleCreateProducer res: " << strResult(result));
 
     // make sure we're still in the Pending/Ready state, closeAsync could have been invoked
     // while waiting for this response if using lazy producers
@@ -213,7 +213,7 @@ Result ProducerImpl::handleCreateProducer(const ClientConnectionPtr& cnx, Result
     if (result == ResultOk) {
         // We are now reconnected to broker and clear to send messages. Re-send all pending messages and
         // set the cnx pointer so that new messages will be sent immediately
-        LOG_INFO(getName() << "Created producer on broker " << cnx->cnxString());
+        LOG_WARN(getName() << "Created producer on broker " << cnx->cnxString());
 
         cnx->registerProducer(producerId_, shared_from_this());
         producerName_ = responseData.producerName;
@@ -354,7 +354,7 @@ void ProducerImpl::resendMessages(ClientConnectionPtr cnx) {
         return;
     }
 
-    LOG_DEBUG(getName() << "Re-Sending " << pendingMessagesQueue_.size() << " messages to server");
+    LOG_WARN(getName() << "Re-Sending " << pendingMessagesQueue_.size() << " messages to server");
 
     for (const auto& op : pendingMessagesQueue_) {
         LOG_DEBUG(getName() << "Re-Sending " << op->sendArgs->sequenceId);
@@ -966,7 +966,7 @@ bool ProducerImpl::encryptMessage(proto::MessageMetadata& metadata, SharedBuffer
 }
 
 void ProducerImpl::disconnectProducer() {
-    LOG_INFO("Broker notification of Closed producer: " << producerId_);
+    LOG_WARN("Broker notification of Closed producer: " << producerId_);
     resetCnx();
     scheduleReconnection();
 }
