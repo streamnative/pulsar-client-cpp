@@ -174,7 +174,7 @@ void HandlerBase::scheduleReconnection(const boost::optional<std::string>& assig
     if (state == Pending || state == Ready) {
         TimeDuration delay = assignedBrokerUrl ? std::chrono::milliseconds(0) : backoff_.next();
 
-        LOG_INFO(getName() << "Schedule reconnection in " << (toMillis(delay) / 1000.0) << " s");
+        LOG_WARN(getName() << "Schedule reconnection in " << (toMillis(delay) / 1000.0) << " s");
         timer_->expires_from_now(delay);
         // passing shared_ptr here since time_ will get destroyed, so tasks will be cancelled
         // so we will not run into the case where grabCnx is invoked on out of scope handler

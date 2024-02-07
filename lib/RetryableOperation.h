@@ -110,7 +110,7 @@ class RetryableOperation : public std::enable_shared_from_this<RetryableOperatio
             timer_->expires_from_now(delay);
 
             auto nextRemainingTime = remainingTime - delay;
-            LOG_INFO("Reschedule " << name_ << " for " << toMillis(delay)
+            LOG_WARN("Reschedule " << name_ << " for " << toMillis(delay)
                                    << " ms, remaining time: " << toMillis(nextRemainingTime) << " ms");
             timer_->async_wait([this, weakSelf, nextRemainingTime](const ASIO_ERROR& ec) {
                 auto self = weakSelf.lock();
