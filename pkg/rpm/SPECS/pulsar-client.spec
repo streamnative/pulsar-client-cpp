@@ -52,7 +52,7 @@ static library.
 %setup -q -n apache-pulsar-client-cpp-%{pom_version}
 
 %build
-cmake . -DBUILD_TESTS=OFF -DLINK_STATIC=ON
+cmake . -DBUILD_TESTS=OFF -DLINK_STATIC=ON -DCMAKE_BUILD_TYPE=Debug
 make -j 3
 
 %install
