@@ -54,7 +54,7 @@ static library.
 
 %build
 git clone https://github.com/microsoft/vcpkg.git
-cmake -B build -DINTEGRATE_VCPKG=ON -DCMAKE_BUILD_TYPE=Release \
+cmake -B build -DINTEGRATE_VCPKG=ON -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_TESTS=OFF -DBUILD_DYNAMIC_LIB=ON -DBUILD_STATIC_LIB=ON
 cmake --build build -j8
 ./build-support/merge_archives_vcpkg.sh $PWD/build
